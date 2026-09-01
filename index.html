@@ -22,6 +22,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      flex-wrap: wrap;
     }
     .logo {
       font-size: 1.35rem;
@@ -40,20 +41,13 @@
       color: #fff;
       padding: 8px 12px;
       border-radius: 8px;
-      width: 220px;
+      width: 260px;
       font-size: 13px;
     }
-    .api-box button {
-      background: #7c6cff;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
+    .api-box input:focus {
+      outline: none;
+      border-color: #7c6cff;
     }
-    .api-box button:hover { background: #6a5af0; }
-
     #chat {
       flex: 1;
       overflow-y: auto;
@@ -94,7 +88,6 @@
       border-radius: 20px;
     }
     .error { color: #ff6b6b; }
-
     footer {
       padding: 16px;
       background: #16161d;
@@ -144,16 +137,18 @@
   <header>
     <div class="logo">ET <span>AI</span></div>
     <div class="api-box">
-      <input type="password" id="apiKey" placeholder="Manus API Key" />
-      <button onclick="saveKey()">Save</button>
+      <input type="password" id="apiKey" placeholder="এখানে Manus API Key পেস্ট করো" />
     </div>
   </header>
 
   <div id="chat">
     <div class="msg bot">
-      হ্যালো! আমি <b>ET AI</b>।  
-Manus AI-এর মতোই কাজ করি।  
-উপরে তোমার Manus API Key দিয়ে Save করো, তারপর যা খুশি জিজ্ঞাসা করো।
+হ্যালো! আমি <b>ET AI</b>।
+
+১. উপরে Manus API Key পেস্ট করো
+২. নিচে প্রশ্ন লিখে ➤ চাপো
+
+Save বাটনের দরকার নেই।
     </div>
   </div>
 
@@ -167,22 +162,27 @@ Manus AI-এর মতোই কাজ করি।
 
   <script>
     const BASE = "https://api.manus.ai";
-    let currentTaskId = null;
-    let polling = false;
 
-    // Load saved key
-    const saved = localStorage.getItem("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE");
-    if (saved) document.getElementById("apiKey").value = saved;
-
-    function saveKey() {
-      const key = document.getElementById("apiKey").value.trim();
-      if (!key) return alert("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE");
-      localStorage.setItem("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE", key);
-      alert("API Key সেভ হয়েছে ✓");
+    // আগের সেভ করা key থাকলে দেখাও
+    const saved = localStorage.getItem("manus_api_key");
+    if (saved) {
+      document.getElementById("apiKey").value = saved;
     }
 
+    // টাইপ/পেস্ট করলেই অটো সেভ
+    document.getElementById("apiKey").addEventListener("input", function () {
+      const v = this.value.trim();
+      if (v) localStorage.setItem("manus_api_key", v);
+    });
+
     function getKey() {
-      return localStorage.getItem("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE") || document.getElementById("apiKey").value.trim();
+      // আগে ইনপুট বক্স থেকে নাও, না থাকলে localStorage
+      const fromInput = document.getElementById("apiKey").value.trim();
+      if (fromInput) {
+        localStorage.setItem("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE", fromInput);
+        return fromInput;
+      }
+      return localStorage.getItem("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE") || "";
     }
 
     function addMsg(text, type = "bot") {
@@ -210,9 +210,17 @@ Manus AI-এর মতোই কাজ করি।
       }
     }
 
+    function sleep(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+
     async function sendMessage() {
       const key = getKey();
-      if (!key) return alert("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE");
+      if (!key) {
+        alert("উপরে Manus API Key পেস্ট করো");
+        document.getElementById("apiKey").focus();
+        return;
+      }
 
       const promptEl = document.getElementById("prompt");
       const text = promptEl.value.trim();
@@ -225,7 +233,6 @@ Manus AI-এর মতোই কাজ করি।
       const statusEl = addStatus("ET AI কাজ শুরু করছে...");
 
       try {
-        // 1. Create task
         const createRes = await fetch(`${BASE}/v2/task.create`, {
           method: "POST",
           headers: {
@@ -238,18 +245,19 @@ Manus AI-এর মতোই কাজ করি।
         });
 
         const createData = await createRes.json();
+
         if (!createData.ok) {
-          throw new Error(createData.error?.message || "Task create failed");
+          throw new Error(createData.error?.message || JSON.stringify(createData) || "Task create failed");
         }
 
-        currentTaskId = createData.task_id;
-        statusEl.textContent = "কাজ চলছে... (poll করছি)";
+        const taskId = createData.task_id;
+        statusEl.textContent = "কাজ চলছে... অপেক্ষা করো";
 
-        // 2. Poll for result
-        await pollTask(currentTaskId, statusEl, key);
+        await pollTask(taskId, statusEl, key);
 
       } catch (err) {
-        statusEl.textContent = "Error: " + err.message;
+        console.error(err);
+        statusEl.textContent = "Error: " + (err.message || err);
         statusEl.classList.add("error");
       } finally {
         document.getElementById("send").disabled = false;
@@ -258,55 +266,68 @@ Manus AI-এর মতোই কাজ করি।
 
     async function pollTask(taskId, statusEl, key) {
       let tries = 0;
-      const maxTries = 120; // ~4 minutes (2s interval)
+      const maxTries = 90;
 
       while (tries < maxTries) {
         tries++;
-        await sleep(2000);
+        await sleep(2500);
 
         const res = await fetch(
-          `${BASE}/v2/task.listMessages?task_id=${taskId}&order=desc&limit=30`,
-          { headers: { "x-manus-api-key": key } }
+          `${BASE}/v2/task.listMessages?task_id=${encodeURIComponent(taskId)}&order=desc&limit=40`,
+          {
+            headers: { "x-manus-api-key": key }
+          }
         );
+
         const data = await res.json();
-        if (!data.ok) throw new Error(data.error?.message || "Poll failed");
+        if (!data.ok) {
+          throw new Error(data.error?.message || "Poll failed");
+        }
 
         const messages = data.messages || [];
 
-        // Check status
-        const statusMsg = messages.find(m => m.type === "status_update");
-        const agentStatus = statusMsg?.status_update?.agent_status;
+        // status খুঁজি
+        let agentStatus = null;
+        let brief = "";
+        for (const m of messages) {
+          if (m.type === "status_update" && m.status_update) {
+            agentStatus = m.status_update.agent_status;
+            brief = m.status_update.brief || m.status_update.description || "";
+            break;
+          }
+        }
 
         if (agentStatus === "running") {
-          statusEl.textContent = "কাজ চলছে... " + (statusMsg?.status_update?.brief || "");
+          statusEl.textContent = "কাজ চলছে... " + (brief || "");
           continue;
         }
 
         if (agentStatus === "error") {
-          const err = messages.find(m => m.type === "error_message");
-          throw new Error(err?.error_message?.content || "Agent error");
+          const errMsg = messages.find(m => m.type === "error_message");
+          throw new Error(errMsg?.error_message?.content || "Agent error");
         }
 
-        if (agentStatus === "stopped" || agentStatus === "waiting") {
-          // Find the latest assistant message
-          const assistant = messages.find(m => m.type === "assistant_message");
-          if (assistant?.assistant_message?.content) {
-            statusEl.remove();
-            addMsg(assistant.assistant_message.content, "bot");
-            return;
-          }
-          // sometimes content comes a bit later
-          if (agentStatus === "stopped") {
-            statusEl.textContent = "শেষ হয়েছে, কিন্তু উত্তর পাওয়া যায়নি। আবার চেষ্টা করো।";
-            return;
-          }
+        // assistant এর উত্তর খুঁজি
+        const assistant = messages.find(m => m.type === "assistant_message");
+        if (assistant?.assistant_message?.content) {
+          statusEl.remove();
+          addMsg(assistant.assistant_message.content, "bot");
+          return;
+        }
+
+        if (agentStatus === "stopped") {
+          statusEl.textContent = "শেষ হয়েছে, কিন্তু টেক্সট উত্তর পাওয়া যায়নি।";
+          return;
+        }
+
+        if (agentStatus === "waiting") {
+          statusEl.textContent = "Agent কিছু কনফার্মেশনের অপেক্ষায়... (এই সিম্পল UI-তে সাপোর্ট নেই)";
+          // এখানে থেমে যাই, নাহলে লুপ চলতে থাকবে
+          return;
         }
       }
-      throw new Error("Timeout — অনেকক্ষণ ধরে উত্তর আসেনি");
-    }
 
-    function sleep(ms) {
-      return new Promise(r => setTimeout(r, ms));
+      throw new Error("Timeout — অনেকক্ষণ ধরে উত্তর আসেনি");
     }
   </script>
 </body>
