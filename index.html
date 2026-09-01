@@ -391,19 +391,30 @@ The user may write in Bengali-English mix (Banglish) or English — mirror which
     const div = document.createElement('div');
     div.className = 'msg ai';
     div.id = 'typingIndicator';
-    div.innerHTML = `<div class="bubble typing"><span></span><span></span><span></span><span class="typing-label">researching…</span></div>`;
+    div.innerHTML = `<div class="bubble typing"><span></span><span></span><span></span><span class="typing-label" id="typingLabel">waking up server…</span></div>`;
     messagesEl.appendChild(div);
     scrollBottom();
+    const label = document.getElementById('typingLabel');
+    const stages = ['waking up server…', 'researching…', 'still digging, this can take a minute…'];
+    let i = 0;
+    const timer = setInterval(() => {
+      i = Math.min(i + 1, stages.length - 1);
+      if(label) label.textContent = stages[i];
+    }, 12000);
+    return timer;
   }
-  function removeTyping(){
+  function removeTyping(timer){
+    if(timer) clearInterval(timer);
     const t = document.getElementById('typingIndicator');
     if(t) t.remove();
   }
 
   // Try the Manus backend. Throws if it's unreachable or misconfigured so the caller can fall back.
+  // Render's free tier can take 30-60s to wake up from sleep, and Manus deep research can take
+  // another 1-2 minutes on top of that — so this needs a generous timeout, not a short one.
   async function tryManusBackend(text){
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    const timeout = setTimeout(() => controller.abort(), 170000); // 170s
     const response = await fetch(BACKEND_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -443,7 +454,7 @@ The user may write in Bengali-English mix (Banglish) or English — mirror which
     addMessage('user', text);
     input.value = '';
     sendBtn.disabled = true;
-    addTyping();
+    const typingTimer = addTyping();
 
     let result;
     try{
@@ -453,7 +464,7 @@ The user may write in Bengali-English mix (Banglish) or English — mirror which
       try{
         result = await fallbackToClaude(text);
       } catch(err2){
-        removeTyping();
+        removeTyping(typingTimer);
         addMessage('ai', "Kono response pawa jayni — connection check koro, abar try koro.");
         console.error(err2);
         sendBtn.disabled = false;
@@ -462,7 +473,7 @@ The user may write in Bengali-English mix (Banglish) or English — mirror which
       }
     }
 
-    removeTyping();
+    removeTyping(typingTimer);
     addMessage('ai', result.text, result.sources);
     sendBtn.disabled = false;
     input.focus();
