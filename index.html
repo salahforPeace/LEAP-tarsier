@@ -176,13 +176,13 @@ Manus AI-এর মতোই কাজ করি।
 
     function saveKey() {
       const key = document.getElementById("apiKey").value.trim();
-      if (!key) return alert("API Key দাও");
-      localStorage.setItem("manus_api_key", key);
+      if (!key) return alert("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE");
+      localStorage.setItem("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE", key);
       alert("API Key সেভ হয়েছে ✓");
     }
 
     function getKey() {
-      return localStorage.getItem("manus_api_key") || document.getElementById("apiKey").value.trim();
+      return localStorage.getItem("sk-Y_z4fyyhgucJCjjawN0lfeZdB4I6wzmOZl4MSWkcRM_ojv96jFitOudO0D61iaTa0Ap_pNNqyapb113omfVX_9DTgxpE") || document.getElementById("apiKey").value.trim();
     }
 
     function addMsg(text, type = "bot") {
